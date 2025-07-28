@@ -1,0 +1,12 @@
+Django>=4.0
+djangorestframework
+gunicorn
+python-dotenv
+pdfplumber
+python-docx
+spacy
+nltk
+sentence-transformers
+numpy
+groq
+Pillow
