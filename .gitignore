@@ -1,0 +1,45 @@
+# Node.js
+node_modules/
+dist/
+.env.local
+.vite/
+.vscode/
+
+# Vite
+*.log
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.db
+*.log
+.env
+venv/
+instance/
+.pytest_cache/
+
+# VS Code settings
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Package lock
+package-lock.json
+yarn.lock
+
+# Frontend build
+frontend/dist/
+frontend/node_modules/
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/*.sqlite3
+backend/.env
+
+# Ignore virtual environments globally
+*.venv/
