@@ -11,7 +11,7 @@ from .embeddings import embed_chunks, embed_query, get_top_k_chunks
 from .llm_processor import hybrid_parse_input, make_decision
 from .models import PolicyDocument, ClaimQuery, UserProfile
 
-# Temporary in-memory store (just for live session usage)
+# Temporary in-memory store (only for current session)
 DOC_STORAGE = {}
 
 @api_view(['POST'])
@@ -26,7 +26,7 @@ def signup(request):
     role = request.data.get('role', '')
 
     if User.objects.filter(username=username).exists():
-        return Response({'error': 'Username already exists'}, status=400)
+        return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
     user = User.objects.create_user(
         username=username,
@@ -35,10 +35,10 @@ def signup(request):
         first_name=first_name,
         last_name=last_name
     )
-
     UserProfile.objects.create(user=user, organization=organization, role=role)
+
     token = Token.objects.create(user=user)
-    return Response({'token': token.key}, status=201)
+    return Response({'token': token.key}, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -48,7 +48,7 @@ def login(request):
     user = authenticate(username=username, password=password)
 
     if not user:
-        return Response({'error': 'Invalid credentials'}, status=400)
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
     token, _ = Token.objects.get_or_create(user=user)
     return Response({'token': token.key})
@@ -57,10 +57,11 @@ def login(request):
 @permission_classes([IsAuthenticated])
 def get_user_info(request):
     user = request.user
+    profile = None
     try:
         profile = UserProfile.objects.get(user=user)
     except UserProfile.DoesNotExist:
-        profile = None
+        pass
 
     return Response({
         'username': user.username,
@@ -74,16 +75,21 @@ def get_user_info(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_document(request):
+    if 'file' not in request.FILES:
+        return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
     file = request.FILES['file']
     filename = file.name
-    text = parse_document(file, filename)
+
+    try:
+        text = parse_document(file, filename)
+    except Exception as e:
+        return Response({'error': f'Failed to parse document: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
     chunks = split_text_to_chunks(text)
     embeddings = embed_chunks(chunks)
 
-    document = PolicyDocument.objects.create(
-        user=request.user,
-        filename=filename
-    )
+    document = PolicyDocument.objects.create(user=request.user, filename=filename)
 
     DOC_STORAGE[str(document.id)] = {
         "chunks": chunks,
@@ -99,8 +105,11 @@ def analyze_query(request):
     query = request.data.get('query')
     document_id = request.data.get('document_id')
 
-    if document_id not in DOC_STORAGE:
-        return Response({"error": "Session expired or document not uploaded again"}, status=400)
+    if not query:
+        return Response({"error": "Query is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not document_id or document_id not in DOC_STORAGE:
+        return Response({"error": "Invalid or expired document session"}, status=status.HTTP_400_BAD_REQUEST)
 
     parsed_input = hybrid_parse_input(query)
     query_embedding = embed_query(query)
@@ -112,14 +121,17 @@ def analyze_query(request):
 
     result = make_decision(parsed_input, top_chunks, source_name=DOC_STORAGE[document_id]['filename'])
 
-    # Save in DB
-    ClaimQuery.objects.create(
-        user=request.user,
-        document=PolicyDocument.objects.get(id=document_id),
-        query_text=query,
-        parsed_input=parsed_input,
-        decision_response=result
-    )
+    try:
+        ClaimQuery.objects.create(
+            user=request.user,
+            document=PolicyDocument.objects.get(id=document_id),
+            query_text=query,
+            parsed_input=parsed_input,
+            decision_response=result
+        )
+    except Exception as e:
+        # Log error but continue, so user gets response
+        print(f"[WARN] Failed to save query: {e}")
 
     return Response(result)
 
@@ -127,15 +139,14 @@ def analyze_query(request):
 @permission_classes([IsAuthenticated])
 def my_queries(request):
     queries = ClaimQuery.objects.filter(user=request.user).order_by('-created_at')
-    data = [
-        {
+    data = []
+    for q in queries:
+        data.append({
             'query_text': q.query_text,
             'parsed_input': q.parsed_input,
             'decision_response': q.decision_response,
             'document_id': str(q.document.id) if q.document else None,
             'filename': q.document.filename if q.document else None,
-            'created_at': q.created_at
-        }
-        for q in queries
-    ]
+            'created_at': q.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
     return Response(data)

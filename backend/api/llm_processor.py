@@ -1,11 +1,18 @@
 import json
 import re
-import spacy
+from geotext import GeoText
 from groq import Groq
 from .utils.env_loader import GROQ_API_KEY
 
-nlp = spacy.load("en_core_web_sm")
 groq_client = Groq(api_key=GROQ_API_KEY)
+
+def extract_location(text):
+    places = GeoText(text)
+    if places.cities:
+        return places.cities[0]
+    elif places.countries:
+        return places.countries[0]
+    return None
 
 def hybrid_parse_input(query):
     result = {
@@ -31,8 +38,7 @@ Extract the following fields from this insurance query:
 
 Only return valid JSON.
 Query:
-\"\"\"{query}\"\"\"
-"""}
+\"\"\"{query}\"\"\""""}
             ]
         )
         raw = response.choices[0].message.content.strip()
@@ -54,22 +60,19 @@ Query:
             result["gender"] = "male"
 
     if not result["location"]:
-        doc = nlp(query)
-        for ent in doc.ents:
-            if ent.label_ == "GPE":
-                result["location"] = ent.text
-                break
+        location = extract_location(query)
+        if location:
+            result["location"] = location
 
     return result
 
 
 def make_decision(parsed_input, top_chunks, source_name="Policy Document A"):
-    # Format matched clauses for LLM and UI
     formatted_clauses = []
     for chunk_text, score in top_chunks:
         formatted_clauses.append({
             "text": chunk_text.strip(),
-            "similarity": round(score * 100, 2),  # as percentage
+            "similarity": round(score * 100, 2),
             "source": source_name
         })
 
@@ -114,11 +117,8 @@ Return only valid JSON in the format:
 """}
             ]
         )
-
         raw = response.choices[0].message.content.strip()
         result_json = json.loads(raw[raw.find("{"):raw.rfind("}")+1])
-
-        # Attach raw similarity/source metadata back
         result_json["matched_clauses"] = formatted_clauses
         return result_json
 

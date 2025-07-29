@@ -1,22 +1,17 @@
 import os
 from pathlib import Path
 
-# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Secret key from environment
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-dev-secret-key")
 
-# Debug mode
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-# Allowed hosts (includes Railway dynamic domain)
 RAILWAY_HOSTNAME = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 if RAILWAY_HOSTNAME:
     ALLOWED_HOSTS.append(RAILWAY_HOSTNAME)
 
-# Installed apps
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -30,9 +25,8 @@ INSTALLED_APPS = [
     'api',
 ]
 
-# Middleware
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # Keep at top for CORS
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -61,7 +55,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'insurance_backend.wsgi.application'
 
-# Database (SQLite for now)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -69,26 +62,15 @@ DATABASES = {
     }
 }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-# CORS
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True  # For quick testing; lock down in production if possible
 
-# REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -98,18 +80,15 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files for Docker
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Optional: External API Keys
+# API Keys from env variables
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
