@@ -1,3 +1,7 @@
+import os
+import nltk
+nltk.data.path.append(os.path.join(os.path.dirname(__file__), "nltk_data")) 
+
 import pdfplumber
 from docx import Document
 from nltk.tokenize import sent_tokenize
