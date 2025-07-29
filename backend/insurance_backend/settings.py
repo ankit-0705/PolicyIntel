@@ -8,7 +8,12 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-dev-secret-key")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 RAILWAY_HOSTNAME = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    'policyintel-production.up.railway.app'  # Add this line
+]
 if RAILWAY_HOSTNAME:
     ALLOWED_HOSTS.append(RAILWAY_HOSTNAME)
 
