@@ -1,45 +1,45 @@
-# Node.js
+# ====================
+# Node.js / Frontend
+# ====================
 node_modules/
 dist/
-.env.local
 .vite/
-.vscode/
-
-# Vite
+.env.local
 *.log
 *.tsbuildinfo
+package-lock.json
+yarn.lock
+frontend/dist/
+frontend/node_modules/
 
-# Python
+# ====================
+# Python / Backend
+# ====================
 __pycache__/
 *.py[cod]
 *.sqlite3
 *.db
 *.log
 .env
+.venv/
 venv/
 instance/
 .pytest_cache/
 
-# VS Code settings
-.vscode/
-
-# OS-specific files
-.DS_Store
-Thumbs.db
-
-# Package lock
-package-lock.json
-yarn.lock
-
-# Frontend build
-frontend/dist/
-frontend/node_modules/
-
-# Backend
+# Specifically for Django
+backend/db.sqlite3
 backend/venv/
 backend/__pycache__/
-backend/*.sqlite3
 backend/.env
+backend/staticfiles/
 
-# Ignore virtual environments globally
-*.venv/
+# ====================
+# VS Code Settings
+# ====================
+.vscode/
+
+# ====================
+# OS-Specific
+# ====================
+.DS_Store
+Thumbs.db
