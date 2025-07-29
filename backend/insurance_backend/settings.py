@@ -1,13 +1,22 @@
+import os
 from pathlib import Path
 
+# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure--e%_ssl10y%rbmwe#a$6%96#5^2j@a($v*7we0=bw$(8rk6b=&'
+# Secret key from environment
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-dev-secret-key")
 
-DEBUG = True
-ALLOWED_HOSTS = ['policyintel.onrender.com', 'localhost', '127.0.0.1','0.0.0.0']
+# Debug mode
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
+# Allowed hosts (includes Railway dynamic domain)
+RAILWAY_HOSTNAME = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+if RAILWAY_HOSTNAME:
+    ALLOWED_HOSTS.append(RAILWAY_HOSTNAME)
 
+# Installed apps
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -21,8 +30,9 @@ INSTALLED_APPS = [
     'api',
 ]
 
+# Middleware
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Moved up for CORS preflight
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -51,10 +61,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'insurance_backend.wsgi.application'
 
-# CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True
-
-# Database
+# Database (SQLite for now)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -62,7 +69,7 @@ DATABASES = {
     }
 }
 
-# Password Validators
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -78,7 +85,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# REST Framework Settings
+# CORS
+CORS_ALLOW_ALL_ORIGINS = True
+
+# REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -88,10 +98,18 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+# Static files for Docker
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Optional: External API Keys
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
