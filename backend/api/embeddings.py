@@ -7,38 +7,61 @@ _model = None
 GLOVE_DIR = os.path.join(os.path.dirname(__file__), "glove")
 os.makedirs(GLOVE_DIR, exist_ok=True)
 
+# Use Google Drive FILE IDs only
 GLOVE_FILES = {
-    "glove_model.kv": "https://drive.google.com/uc?export=download&id=1mcVE0_kPyffRgDAQ3dYI0tqpdZfKVtJo",
-    "glove_model.kv.vectors.npy": "https://drive.google.com/uc?export=download&id=1z44-_Am8ILlxmmKxJYULqMNntG5bsp6g",
+    "glove_model.kv": "1mcVE0_kPyffRgDAQ3dYI0tqpdZfKVtJo",
+    "glove_model.kv.vectors.npy": "1z44-_Am8ILlxmmKxJYULqMNntG5bsp6g",
 }
 
-def download_file_from_google_drive(url, destination):
+
+def download_file_from_google_drive(file_id, destination):
     if os.path.exists(destination):
         print(f"{destination} already exists, skipping download.")
         return
 
     print(f"Downloading {destination} ...")
+    URL = "https://docs.google.com/uc?export=download"
     session = requests.Session()
-    response = session.get(url, stream=True)
-    response.raise_for_status()
 
+    response = session.get(URL, params={"id": file_id}, stream=True)
+    token = get_confirm_token(response)
+
+    if token:
+        params = {"id": file_id, "confirm": token}
+        response = session.get(URL, params=params, stream=True)
+
+    save_response_content(response, destination)
+
+    # Quick HTML content check (bad download)
+    with open(destination, "rb") as f:
+        head = f.read(1024)
+        if b"<html" in head.lower():
+            os.remove(destination)
+            raise ValueError(f"{destination} appears to be an HTML file. Check your Google Drive link or quota.")
+
+    print(f"Downloaded {destination}.")
+
+
+def get_confirm_token(response):
+    for key, value in response.cookies.items():
+        if key.startswith("download_warning"):
+            return value
+    return None
+
+
+def save_response_content(response, destination):
+    CHUNK_SIZE = 32768
     with open(destination, "wb") as f:
-        for chunk in response.iter_content(chunk_size=32768):
+        for chunk in response.iter_content(CHUNK_SIZE):
             if chunk:
                 f.write(chunk)
 
-    # Check for HTML file (Google Drive error page)
-    with open(destination, "rb") as f:
-        header = f.read(1024).lower()
-        if b"<html" in header:
-            raise ValueError(f"{destination} appears to be an HTML file. Check your Google Drive link or quota.")
-    
-    print(f"Downloaded {destination}.")
 
 def ensure_glove_files():
-    for filename, url in GLOVE_FILES.items():
+    for filename, file_id in GLOVE_FILES.items():
         local_path = os.path.join(GLOVE_DIR, filename)
-        download_file_from_google_drive(url, local_path)
+        download_file_from_google_drive(file_id, local_path)
+
 
 def get_model():
     global _model
@@ -46,14 +69,16 @@ def get_model():
         ensure_glove_files()
         model_path = os.path.join(GLOVE_DIR, "glove_model.kv")
 
-        # Patch np.load to allow pickle temporarily
+        # Patch np.load to allow pickle
         orig_np_load = np.load
         np.load = lambda *a, **k: orig_np_load(*a, allow_pickle=True, **k)
 
         _model = KeyedVectors.load(model_path, mmap='r')
 
-        np.load = orig_np_load  # Restore original np.load
+        # Restore np.load
+        np.load = orig_np_load
     return _model
+
 
 def average_embedding(text):
     model = get_model()
@@ -63,16 +88,20 @@ def average_embedding(text):
         return np.zeros(model.vector_size)
     return np.mean(embeddings, axis=0)
 
+
 def embed_chunks(chunks):
     return [average_embedding(chunk) for chunk in chunks]
 
+
 def embed_query(query):
     return average_embedding(query)
+
 
 def cosine_similarity(vec1, vec2):
     if np.linalg.norm(vec1) == 0 or np.linalg.norm(vec2) == 0:
         return 0.0
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
 
 def get_top_k_chunks(query_embedding, chunk_embeddings, chunks, k=3):
     similarities = [cosine_similarity(query_embedding, emb) for emb in chunk_embeddings]
