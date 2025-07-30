@@ -1,4 +1,5 @@
 "use client";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
 import { useState } from "react";
 import axios from "axios";
@@ -106,7 +107,7 @@ export default function Home() {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/api/upload/",
+        `${backendUrl}/api/upload/`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -143,7 +144,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/analyze/", {
+      const response = await axios.post(`${backendUrl}/api/analyze/`, {
         document_id: documentId,
         query,
       });

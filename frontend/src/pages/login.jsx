@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { BackgroundBeams } from "../components/ui/background-beams";
 import { Button } from "../components/ui/stateful-button";
 import PolicyContext from "../context/PolicyContext";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
 const Login = () => {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ const Login = () => {
 
       await new Promise((resolve) => setTimeout(resolve, 750));
 
-      const res = await axios.post("http://127.0.0.1:8000/api/login/", {
+      const res = await axios.post(`${backendUrl}/api/login/`, {
         username: credentials.username,
         password: credentials.password,
       });

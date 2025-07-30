@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PolicyContext from "./PolicyContext";
 import axios from "axios";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
 const PolicyState = (props) => {
   const [profile, setProfile] = useState(null);
@@ -16,7 +17,7 @@ const PolicyState = (props) => {
 
   const info_getter = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/user-info/");
+      const res = await axios.get(`${backendUrl}/api/user-info/`);
       setProfile(res.data);
     } catch (err) {
       console.error("Profile fetch error:", err);
@@ -25,7 +26,7 @@ const PolicyState = (props) => {
 
   const history_getter = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/my-queries/");
+      const res = await axios.get(`${backendUrl}/api/my-queries/`);
       setHistory(res.data);
     } catch (err) {
       console.error("History fetch error:", err);

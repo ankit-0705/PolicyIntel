@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/stateful-button";
 import { Info } from "lucide-react";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ const SignUp = () => {
 
       await new Promise((resolve) => setTimeout(resolve, 750));
 
-      const res = await axios.post("http://127.0.0.1:8000/api/signup/", {
+      const res = await axios.post(`${backendUrl}/api/signup/`, {
         username: formData.username,
         password: formData.password,
         email: formData.email,
