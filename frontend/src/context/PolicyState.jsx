@@ -9,11 +9,22 @@ const PolicyState = (props) => {
 
   // Set default auth headers for all axios requests
   useEffect(() => {
+  const requestInterceptor = axios.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
     if (token) {
-      axios.defaults.headers.common["Authorization"] = `Token ${token}`;
+      config.headers.Authorization = `Token ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
-  }, []);
+    return config;
+  });
+
+  // Cleanup interceptor on unmount to avoid duplicates
+  return () => {
+    axios.interceptors.request.eject(requestInterceptor);
+  };
+}, []);
+
 
   const info_getter = async () => {
     try {
