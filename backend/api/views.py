@@ -6,6 +6,9 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 
+import requests
+from io import BytesIO
+
 from .document_parser import parse_document, split_text_to_chunks
 from .embeddings import embed_chunks, embed_query, get_top_k_chunks
 from .llm_processor import hybrid_parse_input, make_decision
@@ -135,7 +138,6 @@ def analyze_query(request):
             decision_response=result
         )
     except Exception as e:
-        # Log error but continue so user gets response
         print(f"[WARN] Failed to save query: {e}")
 
     return Response(result)
@@ -155,3 +157,35 @@ def my_queries(request):
             'created_at': q.created_at.strftime('%Y-%m-%d %H:%M:%S'),
         })
     return Response(data)
+
+# 🚀 HackRx Webhook Evaluation Endpoint
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def hackrx_run(request):
+    try:
+        document_url = request.data.get("documents")
+        questions = request.data.get("questions", [])
+
+        if not document_url or not questions:
+            return Response({"error": "Missing documents or questions"}, status=400)
+
+        # 1. Download and read file
+        response = requests.get(document_url)
+        file_like = BytesIO(response.content)
+        text = parse_document(file_like, document_url.split("/")[-1])
+
+        # 2. Chunk and embed
+        chunks = split_text_to_chunks(text)
+        embeddings = embed_chunks(chunks)
+
+        answers = []
+        for question in questions:
+            parsed_input = hybrid_parse_input(question)
+            q_embedding = embed_query(question)
+            top_chunks = get_top_k_chunks(q_embedding, embeddings, chunks)
+            result = make_decision(parsed_input, top_chunks, source_name=document_url)
+            answers.append(result.get("justification", "No justification found."))
+
+        return Response({"answers": answers})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
