@@ -1,10 +1,18 @@
 import numpy as np
-import gensim.downloader as api
+import os
+from gensim.models import KeyedVectors
 
-# Load pre-trained GloVe model (100-dimensions)
-model = api.load("glove-wiki-gigaword-100")  # ~128MB
+_model = None  # Global model reference for reuse
+
+def get_model():
+    global _model
+    if _model is None:
+        model_path = os.path.join(os.path.dirname(__file__), "glove", "glove_model.kv")
+        _model = KeyedVectors.load(model_path, mmap='r')
+    return _model
 
 def average_embedding(text):
+    model = get_model()
     words = text.split()
     embeddings = [model[word] for word in words if word in model]
     if not embeddings:
