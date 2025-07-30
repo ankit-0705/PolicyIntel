@@ -1,10 +1,12 @@
 import os
 import nltk
-nltk.data.path.append(os.path.join(os.path.dirname(__file__), "nltk_data")) 
+# Dynamically add the local nltk_data path
+LOCAL_NLTK_DATA = os.path.join(os.path.dirname(__file__), "nltk_data")
+nltk.data.path.append(LOCAL_NLTK_DATA)
 
+from nltk.tokenize import sent_tokenize
 import pdfplumber
 from docx import Document
-from nltk.tokenize import sent_tokenize
 
 def extract_text_from_pdf(file):
     text = ""
@@ -32,7 +34,15 @@ def split_text_to_chunks(text, max_words=300):
     current_word_count = 0
 
     for para in paragraphs:
-        sentences = sent_tokenize(para)
+        try:
+            # Attempt tokenization using Punkt
+            sentences = sent_tokenize(para, language="english")
+        except LookupError as e:
+            raise RuntimeError(
+                f"NLTK resource missing: {e}\n"
+                f"Ensure 'punkt' and 'punkt_tab/english' are available under: {LOCAL_NLTK_DATA}"
+            )
+
         for sent in sentences:
             sent_word_count = len(sent.split())
             if current_word_count + sent_word_count > max_words:
