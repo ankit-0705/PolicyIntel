@@ -122,15 +122,20 @@ def analyze_query(request):
     result = make_decision(parsed_input, top_chunks, source_name=DOC_STORAGE[document_id]['filename'])
 
     try:
+        document_obj = PolicyDocument.objects.get(id=document_id)
+    except PolicyDocument.DoesNotExist:
+        document_obj = None
+
+    try:
         ClaimQuery.objects.create(
             user=request.user,
-            document=PolicyDocument.objects.get(id=document_id),
+            document=document_obj,
             query_text=query,
             parsed_input=parsed_input,
             decision_response=result
         )
     except Exception as e:
-        # Log error but continue, so user gets response
+        # Log error but continue so user gets response
         print(f"[WARN] Failed to save query: {e}")
 
     return Response(result)
