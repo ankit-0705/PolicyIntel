@@ -1,2 +1,0 @@
-backend/api/glove/*.kv filter=lfs diff=lfs merge=lfs -text
-backend/api/glove/*.kv.vectors.npy filter=lfs diff=lfs merge=lfs -text

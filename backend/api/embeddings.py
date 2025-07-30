@@ -1,13 +1,45 @@
-import numpy as np
 import os
+import numpy as np
+import requests
 from gensim.models import KeyedVectors
 
-_model = None  # Global model reference for reuse
+_model = None
+GLOVE_DIR = os.path.join(os.path.dirname(__file__), "glove")
+os.makedirs(GLOVE_DIR, exist_ok=True)
+
+GLOVE_FILES = {
+    "glove_model.kv": "https://drive.google.com/uc?export=download&id=1NdatJLzxiK-VQK47sBA7YcBoPAdDOjUz",
+    "glove_model.kv.vectors.npy": "https://drive.google.com/uc?export=download&id=1Ui6M3s9eJz49DllLNu-FIFHwXnMia3ls",
+}
+
+def download_file_from_google_drive(url, destination):
+    if os.path.exists(destination):
+        print(f"{destination} already exists, skipping download.")
+        return
+    
+    print(f"Downloading {destination} ...")
+    session = requests.Session()
+
+    response = session.get(url, stream=True)
+    response.raise_for_status()
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(chunk_size=32768):
+            if chunk:
+                f.write(chunk)
+
+    print(f"Downloaded {destination}.")
+
+def ensure_glove_files():
+    for filename, url in GLOVE_FILES.items():
+        local_path = os.path.join(GLOVE_DIR, filename)
+        download_file_from_google_drive(url, local_path)
 
 def get_model():
     global _model
     if _model is None:
-        model_path = os.path.join(os.path.dirname(__file__), "glove", "glove_model.kv")
+        ensure_glove_files()
+        model_path = os.path.join(GLOVE_DIR, "glove_model.kv")
         _model = KeyedVectors.load(model_path, mmap='r')
     return _model
 
