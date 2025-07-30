@@ -40,8 +40,16 @@ def get_model():
     if _model is None:
         ensure_glove_files()
         model_path = os.path.join(GLOVE_DIR, "glove_model.kv")
+        
+        # Patch np.load to allow pickle temporarily
+        orig_np_load = np.load
+        np.load = lambda *a, **k: orig_np_load(*a, allow_pickle=True, **k)
+        
         _model = KeyedVectors.load(model_path, mmap='r')
+        
+        np.load = orig_np_load  # Restore original np.load
     return _model
+
 
 def average_embedding(text):
     model = get_model()
