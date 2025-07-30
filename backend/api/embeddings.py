@@ -8,8 +8,8 @@ GLOVE_DIR = os.path.join(os.path.dirname(__file__), "glove")
 os.makedirs(GLOVE_DIR, exist_ok=True)
 
 GLOVE_FILES = {
-    "glove_model.kv": "https://drive.google.com/uc?export=download&id=1NdatJLzxiK-VQK47sBA7YcBoPAdDOjUz",
-    "glove_model.kv.vectors.npy": "https://drive.google.com/uc?export=download&id=1Ui6M3s9eJz49DllLNu-FIFHwXnMia3ls",
+    "glove_model.kv": "https://drive.google.com/uc?export=download&id=1mcVE0_kPyffRgDAQ3dYI0tqpdZfKVtJo",
+    "glove_model.kv.vectors.npy": "https://drive.google.com/uc?export=download&id=1z44-_Am8ILlxmmKxJYULqMNntG5bsp6g",
 }
 
 def download_file_from_google_drive(url, destination):
