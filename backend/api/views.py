@@ -163,6 +163,14 @@ def my_queries(request):
 @permission_classes([AllowAny])
 def hackrx_run(request):
     try:
+        # Optional: Log or gracefully ignore Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            # Just extract the token if needed later
+            token = auth_header.split("Bearer ")[1].strip()
+            # No validation needed — we just ignore it for now
+            pass
+
         document_url = request.data.get("documents")
         questions = request.data.get("questions", [])
 
