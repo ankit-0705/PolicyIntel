@@ -14,6 +14,11 @@ from .embeddings import embed_chunks, embed_query, get_top_k_chunks
 from .llm_processor import hybrid_parse_input, make_decision
 from .models import PolicyDocument, ClaimQuery, UserProfile
 
+from groq import Groq
+from .utils.env_loader import GROQ_API_KEY
+
+groq_client = Groq(api_key=GROQ_API_KEY)
+
 # Temporary in-memory store (only for current session)
 DOC_STORAGE = {}
 
@@ -158,42 +163,58 @@ def my_queries(request):
         })
     return Response(data)
 
-# 🚀 HackRx Webhook Evaluation Endpoint
+# 🚀 Updated HackRx Webhook Evaluation Endpoint
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def hackrx_run(request):
     try:
-        # Optional: Log or gracefully ignore Authorization header
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            # Just extract the token if needed later
-            token = auth_header.split("Bearer ")[1].strip()
-            # No validation needed — we just ignore it for now
-            pass
-
         document_url = request.data.get("documents")
         questions = request.data.get("questions", [])
 
         if not document_url or not questions:
             return Response({"error": "Missing documents or questions"}, status=400)
 
-        # 1. Download and read file
+        # Download the document
         response = requests.get(document_url)
+        response.raise_for_status()
         file_like = BytesIO(response.content)
         text = parse_document(file_like, document_url.split("/")[-1])
 
-        # 2. Chunk and embed
+        # Chunk and embed
         chunks = split_text_to_chunks(text)
         embeddings = embed_chunks(chunks)
 
         answers = []
+
         for question in questions:
-            parsed_input = hybrid_parse_input(question)
-            q_embedding = embed_query(question)
-            top_chunks = get_top_k_chunks(q_embedding, embeddings, chunks)
-            result = make_decision(parsed_input, top_chunks, source_name=document_url)
-            answers.append(result.get("justification", "No justification found."))
+            query_embedding = embed_query(question)
+            top_chunks = get_top_k_chunks(query_embedding, embeddings, chunks)
+            top_text = "\n\n".join([chunk for chunk, _ in top_chunks])
+
+            # Ask Groq LLM for an answer based on top chunks
+            llm_response = groq_client.chat.completions.create(
+                model="llama3-70b-8192",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that answers questions based on the provided policy document content."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""Document Content:
+{top_text}
+
+Question: {question}
+
+Answer the question based only on the content above. Be clear, concise, and factual."""
+                    }
+                ]
+            )
+
+            answer = llm_response.choices[0].message.content.strip()
+            answers.append(answer)
 
         return Response({"answers": answers})
+
     except Exception as e:
         return Response({"error": str(e)}, status=500)
