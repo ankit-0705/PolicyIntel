@@ -8,6 +8,7 @@ from rest_framework.authtoken.models import Token
 
 import requests
 from io import BytesIO
+import traceback
 
 from .document_parser import parse_document, split_text_to_chunks
 from .embeddings import embed_chunks, embed_query, get_top_k_chunks
@@ -168,30 +169,44 @@ def my_queries(request):
 @permission_classes([AllowAny])
 def hackrx_run(request):
     try:
+        print("="*40)
+        print("Received request with data:", request.data)
         document_url = request.data.get("documents")
         questions = request.data.get("questions", [])
+        print("Document URL:", document_url)
+        print("Questions:", questions)
 
         if not document_url or not questions:
+            print("Missing documents or questions in request")
             return Response({"error": "Missing documents or questions"}, status=400)
 
         # Download the document
+        print("Attempting to download document...")
         response = requests.get(document_url)
         response.raise_for_status()
         file_like = BytesIO(response.content)
+        print("Document downloaded successfully. Parsing...")
         text = parse_document(file_like, document_url.split("/")[-1])
+        print("Document parsed successfully.")
 
         # Chunk and embed
+        print("Splitting text into chunks...")
         chunks = split_text_to_chunks(text)
+        print(f"Split into {len(chunks)} chunks.")
+        print("Embedding chunks...")
         embeddings = embed_chunks(chunks)
+        print("Chunks embedded.")
 
         answers = []
 
-        for question in questions:
+        for idx, question in enumerate(questions):
+            print(f"Processing question {idx + 1}: {question}")
             query_embedding = embed_query(question)
             top_chunks = get_top_k_chunks(query_embedding, embeddings, chunks)
             top_text = "\n\n".join([chunk for chunk, _ in top_chunks])
 
             # Ask Groq LLM for an answer based on top chunks
+            print("Querying Groq LLM...")
             llm_response = groq_client.chat.completions.create(
                 model="llama3-70b-8192",
                 messages=[
@@ -213,8 +228,19 @@ Answer the question based only on the content above. Be clear, concise, and fact
 
             answer = llm_response.choices[0].message.content.strip()
             answers.append(answer)
+            print(f"Answer {idx + 1}: {answer}")
 
+        print("All questions processed successfully. Returning answers.")
+        print("="*40)
         return Response({"answers": answers})
 
     except Exception as e:
+        # Print the error and full traceback to Railway logs
+        print("="*40)
+        print("[ERROR in hackrx_run]")
+        print("Exception:", str(e))
+        tb = traceback.format_exc()
+        print(tb)
+        print("="*40)
+        # Respond to caller with minimal error
         return Response({"error": str(e)}, status=500)
