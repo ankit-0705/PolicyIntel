@@ -195,7 +195,7 @@ def hackrx_run(request):
         parsed_url = urlparse(document_url)
         filename = parsed_url.path.split("/")[-1]
         
-        text = parse_document(file_like, filename)
+        text = parse_document(file_like, filename, max_pages=150)
 
         # Continue rest of your logic without changes...
         chunks = split_text_to_chunks(text)
