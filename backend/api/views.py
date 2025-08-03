@@ -171,8 +171,6 @@ def my_queries(request):
 @permission_classes([AllowAny])
 def hackrx_run(request):
     try:
-        print("="*40)
-        print("Received request with data:", request.data)
         raw_doc_url = request.data.get("documents")
         questions = request.data.get("questions", [])
         
@@ -185,15 +183,10 @@ def hackrx_run(request):
                 document_url = raw_doc_url.strip("[](); ")
         else:
             document_url = None
-
-        print("Sanitized Document URL:", document_url)
-        print("Questions:", questions)
         
         if not document_url or not questions:
-            print("Missing documents or questions in request")
             return Response({"error": "Missing documents or questions"}, status=400)
         
-        print("Attempting to download document...")
         response = requests.get(document_url)
         response.raise_for_status()
         file_like = BytesIO(response.content)
@@ -201,28 +194,19 @@ def hackrx_run(request):
         # Extract the clean filename
         parsed_url = urlparse(document_url)
         filename = parsed_url.path.split("/")[-1]
-        print("Parsed filename:", filename)
         
-        print("Document downloaded successfully. Parsing...")
         text = parse_document(file_like, filename)
-        print("Document parsed successfully.")
 
         # Continue rest of your logic without changes...
-        print("Splitting text into chunks...")
         chunks = split_text_to_chunks(text)
-        print(f"Split into {len(chunks)} chunks.")
-        print("Embedding chunks...")
         embeddings = embed_chunks(chunks)
-        print("Chunks embedded.")
 
         answers = []
         for idx, question in enumerate(questions):
-            print(f"Processing question {idx + 1}: {question}")
             query_embedding = embed_query(question)
             top_chunks = get_top_k_chunks(query_embedding, embeddings, chunks)
             top_text = "\n\n".join([chunk for chunk, _ in top_chunks])
 
-            print("Querying Groq LLM...")
             llm_response = groq_client.chat.completions.create(
                 model="llama3-70b-8192",
                 messages=[
@@ -244,17 +228,12 @@ Answer the question based only on the content above. Be clear, concise, and fact
 
             answer = llm_response.choices[0].message.content.strip()
             answers.append(answer)
-            print(f"Answer {idx + 1}: {answer}")
 
-        print("All questions processed successfully. Returning answers.")
-        print("="*40)
         return Response({"answers": answers})
 
     except Exception as e:
-        print("="*40)
         print("[ERROR in hackrx_run]")
         print("Exception:", str(e))
         tb = traceback.format_exc()
         print(tb)
-        print("="*40)
         return Response({"error": str(e)}, status=500)

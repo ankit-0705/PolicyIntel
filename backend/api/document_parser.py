@@ -8,22 +8,34 @@ from nltk.tokenize import sent_tokenize
 import pdfplumber
 from docx import Document
 
-def extract_text_from_pdf(file):
+def extract_text_from_pdf(file, max_pages=50):
     text = ""
     with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text() + "\n"
+        for i, page in enumerate(pdf.pages):
+            if i >= max_pages:
+                break
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
     return text.strip()
 
-def extract_text_from_docx(file):
-    doc = Document(file)
-    return "\n".join([p.text for p in doc.paragraphs if p.text.strip()]).strip()
 
-def parse_document(file_obj, filename):
+def extract_text_from_docx(file, max_paragraphs=500):
+    doc = Document(file)
+    lines = []
+    for i, p in enumerate(doc.paragraphs):
+        if i >= max_paragraphs:
+            break
+        text = p.text.strip()
+        if text:
+            lines.append(text)
+    return "\n".join(lines).strip()
+
+def parse_document(file_obj, filename, max_pages=50, max_paragraphs=500):
     if filename.endswith(".pdf"):
-        return extract_text_from_pdf(file_obj)
+        return extract_text_from_pdf(file_obj, max_pages=max_pages)
     elif filename.endswith(".docx"):
-        return extract_text_from_docx(file_obj)
+        return extract_text_from_docx(file_obj, max_paragraphs=max_paragraphs)
     else:
         raise ValueError("Unsupported file format")
 
