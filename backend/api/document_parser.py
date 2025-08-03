@@ -8,7 +8,7 @@ from nltk.tokenize import sent_tokenize
 import pdfplumber
 from docx import Document
 
-def extract_text_from_pdf(file, max_pages=150):
+def extract_text_from_pdf(file, max_pages=250):
     text = ""
     with pdfplumber.open(file) as pdf:
         for i, page in enumerate(pdf.pages):
@@ -31,7 +31,7 @@ def extract_text_from_docx(file, max_paragraphs=500):
             lines.append(text)
     return "\n".join(lines).strip()
 
-def parse_document(file_obj, filename, max_pages=150, max_paragraphs=500):
+def parse_document(file_obj, filename, max_pages=250, max_paragraphs=500):
     if filename.endswith(".pdf"):
         return extract_text_from_pdf(file_obj, max_pages=max_pages)
     elif filename.endswith(".docx"):
