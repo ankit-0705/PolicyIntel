@@ -171,10 +171,10 @@ def my_queries(request):
 @permission_classes([AllowAny])
 def hackrx_run(request):
     try:
+        # 1. Parse and clean input
         raw_doc_url = request.data.get("documents")
         questions = request.data.get("questions", [])
-        
-        # Clean up and extract the real URL
+        # Clean up and extract true URL
         if raw_doc_url:
             match = re.match(r"\[.*\]\((.*)\)", raw_doc_url)
             if match:
@@ -183,24 +183,31 @@ def hackrx_run(request):
                 document_url = raw_doc_url.strip("[](); ")
         else:
             document_url = None
-        
+
         if not document_url or not questions:
             return Response({"error": "Missing documents or questions"}, status=400)
-        
-        response = requests.get(document_url)
+
+        # 2. Download with file size safety check
+        response = requests.get(document_url, timeout=10)
         response.raise_for_status()
+        MAX_FILE_SIZE = 3 * 1024 * 1024  # 3 MB; tune as needed (go LOWER if still crashing!)
+        if len(response.content) > MAX_FILE_SIZE:
+            return Response({"error": "Document too large to process (max 3MB)"}, status=400)
         file_like = BytesIO(response.content)
-        
-        # Extract the clean filename
+
+        # 3. Parse document with strict limits
         parsed_url = urlparse(document_url)
         filename = parsed_url.path.split("/")[-1]
-        
-        text = parse_document(file_like, filename, max_pages=150)
+        # Hard limit
+        text = parse_document(file_like, filename, max_pages=30, max_paragraphs=200)
 
-        # Continue rest of your logic without changes...
+        # 4. (Optional) Early out if no content
+        if not text:
+            return Response({"answers": ["Document could not be parsed, or is empty."] * len(questions)})
+
+        # 5. Chunk, embed, and answer (as before)
         chunks = split_text_to_chunks(text)
         embeddings = embed_chunks(chunks)
-
         answers = []
         for idx, question in enumerate(questions):
             query_embedding = embed_query(question)
@@ -210,22 +217,10 @@ def hackrx_run(request):
             llm_response = groq_client.chat.completions.create(
                 model="llama3-70b-8192",
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that answers questions based on the provided policy document content."
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""Document Content:
-{top_text}
-
-Question: {question}
-
-Answer the question based only on the content above. Be clear, concise, and factual."""
-                    }
+                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided policy document content."},
+                    {"role": "user", "content": f"Document Content:\n{top_text}\n\nQuestion: {question}\n\nAnswer the question based only on the content above. Be clear, concise, and factual."}
                 ]
             )
-
             answer = llm_response.choices[0].message.content.strip()
             answers.append(answer)
 
