@@ -219,7 +219,8 @@ def hackrx_run(request):
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided policy document content."},
                     {"role": "user", "content": f"Document Content:\n{top_text}\n\nQuestion: {question}\n\nAnswer the question based only on the content above. Be clear, concise, and factual."}
-                ]
+                ],
+                timeout=15
             )
             answer = llm_response.choices[0].message.content.strip()
             answers.append(answer)
